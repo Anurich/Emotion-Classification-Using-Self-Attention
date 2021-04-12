@@ -10,11 +10,15 @@ In this work, I used encoder archtiecture from the paper Attention is all you ne
   <li> Pytorch==1.6.0</li>
  </ul>
 <h4> Architecture. </h4>
+<p>
 For my work I only used encoder architecture which is shown in given image:- 
 <figure>
 <img src ="transformer.png" height="300" width="500"/>
   </figure>
+</p>
 <h3> Results. </h3>
+<p>
 <figure> 
-  <img src="output_transformer.png" height="300" width="500"/>
+  <img src="output_transformer.png" height="400" width="500"/>
  </figure>
+</p>
