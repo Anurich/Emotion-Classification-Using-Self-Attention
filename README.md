@@ -12,5 +12,5 @@ In this work, I used encoder archtiecture from the paper Attention is all you ne
 <h4> Architecture. </h4>
 I used encoder architecture from paper <b> Attention is all you need </b> which is shown in given image:- 
 <figure>
-<img src ="transformer_encoder.png" heigh="300" width="500"/>
+<img src ="transformer_encoder.png" heigh="100" width="100"/>
   </figure>
