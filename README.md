@@ -14,3 +14,6 @@ For my work I only used encoder architecture which is shown in given image:-
 <figure>
 <img src ="transformer.png" heigh="300" width="500"/>
   </figure>
+<h3> Results. </h3>
+<figure> 
+  <img src=""
