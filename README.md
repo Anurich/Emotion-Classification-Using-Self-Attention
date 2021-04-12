@@ -22,3 +22,5 @@ For my work I only used encoder architecture which is shown in given image:-
   <img src="output_transformer.png" height="400" width="500"/>
  </figure>
 </p>
+<h3> Contribute </h3>
+I will appreciate any feed back related to the code. Any suggestion that can help me improve further would be very much appreciated.
