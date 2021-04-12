@@ -23,4 +23,4 @@ For my work I only used encoder architecture which is shown in given image:-
  </figure>
 </p>
 <h3> Contribute </h3>
-I will appreciate any feed back related to the code. Any suggestion that can help me improve further would be very much appreciated.
+I will appreciate any feed back related to the code and Any suggestion that can help me improve further.
