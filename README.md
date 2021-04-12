@@ -10,7 +10,7 @@ In this work, I used encoder archtiecture from the paper Attention is all you ne
   <li> Pytorch==1.6.0</li>
  </ul>
 <h4> Architecture. </h4>
-I used encoder architecture from paper <b> Attention is all you need </b> which is shown in given image:- 
+For my work I only used encoder architecture which is shown in given image:- 
 <figure>
 <img src ="transformer.png" heigh="300" width="500"/>
   </figure>
