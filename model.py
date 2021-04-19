@@ -12,7 +12,7 @@ class MultiheadedAttention(nn.Module):
         self.query = nn.Linear(self.d_model, self.d_model)
         self.value = nn.Linear(self.d_model, self.d_model)
         self.dropout = nn.Dropout(p=0.1)
-        self.layernorm= nn.LayerNorm([12,512])
+        self.layernorm= nn.LayerNorm(512)
         # feed forward network
 
         self.linear_feed = nn.Linear(self.d_model,self.d_model )
@@ -20,11 +20,10 @@ class MultiheadedAttention(nn.Module):
 
 
     def dot_product(self, query, key, value):
-        qk = torch.matmul(query, torch.transpose(key,2,3))
         dim = torch.tensor(query.size()[-1]).type(torch.FloatTensor)
-        scale = qk/torch.sqrt(dim)
+        qk = torch.matmul(query/dim**0.5, torch.transpose(key,2,3))
         # perform softmax
-        softmax = torch.softmax(scale, dim=-1)
+        softmax = torch.softmax(qk, dim=-1)
         # multiply with value
         attention = torch.matmul(softmax, value)
         return attention
@@ -35,15 +34,15 @@ class MultiheadedAttention(nn.Module):
         Qq = self.query(embedding)
         # reshape all
         #print(QK.shape, QV.shape, Qq.shape)
-        QK = QK.view(32,-1, self.split_, self.num_head)
-        QV = QV.view(32,-1, self.split_, self.num_head)
-        Qq = Qq.view(32,-1, self.split_, self.num_head)
-        attention = self.dot_product(Qq,QK, QV)
+        QK = QK.view(32,-1, self.num_head, self.split_)
+        QV = QV.view(32,-1, self.num_head, self.split_)
+        Qq = Qq.view(32,-1, self.num_head, self.split_)
+        attention = self.dot_product(Qq, QK, QV)
         attention = attention.view(32, -1, self.d_model)
         attention = self.dropout(attention)
         # summantion and normalization
         attention = embedding + attention
-        normalizedAttention = self.layernorm(attention)
+        normalizedAttention = self.layernorm(attention + embedding)
         dense  = torch.relu(self.linear_feed(normalizedAttention))
         dense  = self.dropout(dense)
 
