@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import sys
 from dataloader import *
+from einops import rearrange, reduce
 class MultiheadedAttention(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self):
         super(MultiheadedAttention, self).__init__()
         self.num_head = 8
         self.d_model = 512
@@ -11,9 +12,7 @@ class MultiheadedAttention(nn.Module):
         self.key  = nn.Linear(self.d_model,self.d_model)
         self.query = nn.Linear(self.d_model, self.d_model)
         self.value = nn.Linear(self.d_model, self.d_model)
-        self.dropout = nn.Dropout(p=0.1)
-        self.layernorm= nn.LayerNorm(512)
-        # feed forward network
+        # linear layer
 
         self.linear_feed = nn.Linear(self.d_model,self.d_model )
         #self.output = nn.Linear(6144, vocab_size)
@@ -21,11 +20,17 @@ class MultiheadedAttention(nn.Module):
 
     def dot_product(self, query, key, value):
         dim = torch.tensor(query.size()[-1]).type(torch.FloatTensor)
-        qk = torch.matmul(query/dim**0.5, torch.transpose(key,2,3))
+        # query -> batch_size, head, seqLength, embeddingSize
+        # key   -> batch_size, head, seqLength, embeddingSize
+        # query * key ->  batch_size, head, seqLength, seqLength
+        qk = torch.einsum('bhqj, bhkj -> bhqk', query, key)/torch.sqrt(dim)#-> (b h n n) where n: seqlength
         # perform softmax
         softmax = torch.softmax(qk, dim=-1)
         # multiply with value
-        attention = torch.matmul(softmax, value)
+        # softmax ->  batch_size, head, seqLength, seqLength
+        # value   ->  batch_size, head, seqLength, embeddingSize
+        # output  ->  batch_size, head, seqLength, embeddingSize
+        attention = torch.einsum('bhqj, bhjv -> bhqv', softmax, value) #-> (b h n e) where e: embeddingSize
         return attention
 
     def forward(self, embedding):
@@ -34,22 +39,39 @@ class MultiheadedAttention(nn.Module):
         Qq = self.query(embedding)
         # reshape all
         #print(QK.shape, QV.shape, Qq.shape)
-        QK = QK.view(32,-1, self.num_head, self.split_)
-        QV = QV.view(32,-1, self.num_head, self.split_)
-        Qq = Qq.view(32,-1, self.num_head, self.split_)
-        attention = self.dot_product(Qq, QK, QV)
-        attention = attention.view(32, -1, self.d_model)
-        attention = self.dropout(attention)
-        # summantion and normalization
-        attention = embedding + attention
-        normalizedAttention = self.layernorm(attention + embedding)
-        dense  = torch.relu(self.linear_feed(normalizedAttention))
-        dense  = self.dropout(dense)
-
-        dense_normalized = self.layernorm(normalizedAttention + dense)
+        QK = rearrange(QK,'b n (h d) -> b h n d', h = self.num_head)
+        QV = rearrange(QV, 'b n (h d) -> b h n d', h=self.num_head)
+        Qq = rearrange(Qq, 'b n (h d) -> b h n d', h=self.num_head)
+        attention = rearrange(self.dot_product(Qq, QK, QV), 'b h n d -> b n (h d)')
+        attention= self.linear_feed(attention)
         #output
-        return dense_normalized
+        return attention
 
+
+
+class EncoderLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # multiheaded attention is ready
+        self.multiheaded=  MultiheadedAttention()
+        self.d_model = 512
+        self.layerNorm  = nn.LayerNorm(self.d_model)
+
+        # feed forward network
+        self.feed_forward = nn.Sequential(
+            nn.Linear(in_features = self.d_model, out_features = self.d_model),
+            nn.ReLU(),
+            nn.Dropout(p=0.1),
+            nn.Linear(in_features = self.d_model, out_features = self.d_model)
+                      )
+        self.layerNorm1 = nn.LayerNorm(self.d_model)
+    def forward(self, x):
+        mutihead  = self.multiheaded(x)
+        norm1 = self.layerNorm(mutihead + x)
+        feed_out = self.feed_forward(norm1)
+
+        output = self.layerNorm1(feed_out + norm1)
+        return output
 
 class Encoder(nn.Module):
     def __init__(self, vocab_size, numtimes=2):
@@ -61,9 +83,17 @@ class Encoder(nn.Module):
         self.position_encode = nn.Embedding(num_embeddings=12, embedding_dim = self.d_model)
         self.attention_list = []
         for i in range(numtimes):
-            self.attention_list.append(MultiheadedAttention(vocab_size))
+            self.attention_list.append(EncoderLayer())
         self.attention_list = nn.Sequential(*self.attention_list)
-        self.dense_output = nn.Linear(6144, vocab_size)
+        self.finalLayer = nn.Sequential(
+            nn.Linear(self.d_model, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1024),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(1024, vocab_size),
+            nn.LogSoftmax(dim=-1)
+        )
 
     def forward(self, input_sent):
         batch_size, maxlen = input_sent.size()
@@ -72,12 +102,13 @@ class Encoder(nn.Module):
         pos_embed = self.position_encode(position)
         embed = semantic_embed + pos_embed
         output = self.attention_list(embed)
-        output = torch.log_softmax(self.dense_output(output.view(batch_size, -1)),dim=-1)
+        output = reduce(output, 'b n e -> b e', reduction='mean')
+        output = self.finalLayer(output)
         return output
 
 def main():
     if __name__ == "__main__":
-        batch_size=32
+        batch_size = 64
         batchLoader = get_data_loader("emotion_detector_train.csv", batch_size, train=True)
         vocab_size = len(batchLoader.dataset.index_to_word)
         episode = 100
