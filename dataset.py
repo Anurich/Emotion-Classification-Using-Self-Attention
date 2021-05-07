@@ -8,7 +8,17 @@ def save_pickle_file(Object, file ):
     #save dictionary as pickle
     with open(file, "wb") as handler:
         pickle.dump(Object,handler)
-
+def removeWords(text):
+    tweet = re.sub(r"@\s+","",tweet)
+    tweet = re.sub(r"#\s+","",tweet)
+    #tweet = re.sub(r"\.+", "",tweet)
+    tweet = hero.remove_stopwords(pd.Series(tweet)).to_string(index=False)
+    tweet = re.sub(r'[^\w\s]','', tweet)
+    tweet = re.sub(r"\w+\d+","",tweet)
+    tweet = re.sub(r"\d+\w+","",tweet)
+    tweet = re.sub(r"\b\w{1,3}\b","",tweet)
+    return tweet 
+    
 def preprocess_data(folder, name, train=True):
     dataframe = pd.DataFrame(columns=("Tweet","Affect Dimension"))
     list_of_folders = os.listdir(folder)
@@ -24,16 +34,7 @@ def preprocess_data(folder, name, train=True):
                     _, tweet, affDim, IC = line.split("\t")
                     class_id, text= IC.split(":")
                     map_emotion[value] = affDim
-                    tweet = re.sub(r"@\s+","",tweet)
-                    tweet = re.sub(r"#\s+","",tweet)
-                    #tweet = re.sub(r"\.+", "",tweet)
-                    tweet = hero.remove_stopwords(pd.Series(tweet)).to_string(index=False)
-                    tweet = re.sub(r'[^\w\s]','', tweet)
-                    tweet = re.sub(r"\w+\d+","",tweet)
-                    tweet = re.sub(r"\d+\w+","",tweet)
-                    tweet = re.sub(r"\b\w{1,3}\b","",tweet)
-
-                    #print(tweet)
+                    tweet  = removeWords(text)
                     dataframe = dataframe.append([{"Tweet":tweet.lower().strip(),"Affect Dimension":value}], ignore_index =False)
                     intensityClass[text] = class_id
                 value+=1
@@ -45,15 +46,7 @@ def preprocess_data(folder, name, train=True):
                 for line in lines:
                     _, tweet, affDim, IS = line.split("\t")
                     map_emotion[value] = affDim
-                    tweet = re.sub(r"@\s+","",tweet)
-                    tweet = re.sub(r"#\s+","",tweet)
-                    #tweet = re.sub(r"\.+", "",tweet)
-                    tweet = hero.remove_stopwords(pd.Series(tweet)).to_string(index=False)
-                    tweet = re.sub(r'[^\w\s]','', tweet)
-                    tweet = re.sub(r"\w+\d+","",tweet)
-                    tweet = re.sub(r"\d+\w+","",tweet)
-                    tweet = re.sub(r"\b\w{1,3}\b","",tweet)
-                    #print(tweet)
+                    tweet  = removeWords(text)
                     dataframe = dataframe.append([{"Tweet":tweet.lower().strip(),"Affect Dimension":value}], ignore_index =False)
                 value+=1
     dataframe.to_csv("emotion_detector_"+name+".csv")
